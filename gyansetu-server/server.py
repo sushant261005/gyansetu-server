@@ -1,15 +1,14 @@
 from flask import Flask, request, jsonify
 import os
-from google import genai
+import google.generativeai as genai
 
 app = Flask(__name__)
 
-# Load API key
+# Load API Key
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-client = None
 if GEMINI_API_KEY:
-    client = genai.Client(api_key=GEMINI_API_KEY)
+    genai.configure(api_key=GEMINI_API_KEY)
 
 @app.route("/")
 def home():
@@ -22,14 +21,12 @@ def ask():
     if not query:
         return jsonify({"error": "Query is required"}), 400
 
-    if not client:
+    if not GEMINI_API_KEY:
         return jsonify({"error": "Gemini API key missing"}), 500
 
     try:
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=query
-        )
+        model = genai.GenerativeModel("gemini-pro")
+        response = model.generate_content(query)
 
         return jsonify({
             "provider": "Gemini",
