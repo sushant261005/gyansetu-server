@@ -5,17 +5,17 @@ from openai import OpenAI
 
 app = Flask(__name__)
 
-# Load API Keys
+# Load API keys
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Setup Gemini if available
+# Setup Gemini
 gemini_model = None
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
     gemini_model = genai.GenerativeModel("gemini-pro")
 
-# Setup OpenAI if available
+# Setup OpenAI
 openai_client = None
 if OPENAI_API_KEY:
     openai_client = OpenAI(api_key=OPENAI_API_KEY)
@@ -26,36 +26,30 @@ def home():
     return "GyanSetu AI Server is running 🚀"
 
 
-@app.route("/ask", methods=["GET", "POST"])
-def ask_ai():
-    if request.method == "POST":
-        data = request.json
-        query = data.get("query")
-    else:
-        query = request.args.get("query")
+@app.route("/ask", methods=["GET"])
+def ask():
+    query = request.args.get("query")
 
     if not query:
         return jsonify({"error": "Query is required"}), 400
 
-    # Try Gemini first
+    # Try Gemini
     if gemini_model:
         try:
-            response = gemini_model.generate_content(query)
+            res = gemini_model.generate_content(query)
             return jsonify({
                 "provider": "Gemini",
-                "answer": response.text
+                "answer": res.text
             })
         except Exception as e:
             print("Gemini error:", e)
 
-    # Fallback to OpenAI
+    # Try OpenAI
     if openai_client:
         try:
             completion = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=[
-                    {"role": "user", "content": query}
-                ]
+                messages=[{"role": "user", "content": query}]
             )
             return jsonify({
                 "provider": "OpenAI",
