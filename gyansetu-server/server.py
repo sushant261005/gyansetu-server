@@ -8,7 +8,6 @@ app = Flask(__name__)
 # ================= API KEYS =================
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 # ================ GEMINI ====================
@@ -20,16 +19,13 @@ if GEMINI_API_KEY:
 # ================ GROQ ======================
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# ============== TOGETHER ===================
-TOGETHER_URL = "https://api.together.xyz/v1/chat/completions"
-
 # ============ OPENROUTER ===================
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
 @app.route("/")
 def home():
-    return "GyanSetu AI Server is running 🚀 (Multi-Free AI Engine)"
+    return "GyanSetu AI Server is running 🚀 (Free Multi-AI Engine)"
 
 
 @app.route("/ask", methods=["GET"])
@@ -63,24 +59,7 @@ def ask():
         except Exception as e:
             print("Groq error:", e)
 
-    # ===== 3) Together AI =====
-    if TOGETHER_API_KEY:
-        try:
-            headers = {
-                "Authorization": f"Bearer {TOGETHER_API_KEY}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "model": "meta-llama/Llama-3-70b-chat-hf",
-                "messages": [{"role": "user", "content": query}]
-            }
-            r = requests.post(TOGETHER_URL, headers=headers, json=payload)
-            data = r.json()
-            return jsonify({"provider": "TogetherAI", "answer": data["choices"][0]["message"]["content"]})
-        except Exception as e:
-            print("Together error:", e)
-
-    # ===== 4) OpenRouter (free models) =====
+    # ===== 3) OpenRouter (Copilot-class models) =====
     if OPENROUTER_API_KEY:
         try:
             headers = {
