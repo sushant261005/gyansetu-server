@@ -2,65 +2,78 @@ from flask import Flask, request, jsonify
 import os
 import google.generativeai as genai
 from openai import OpenAI
+import requests
 
 app = Flask(__name__)
 
-# ==============================
-# Load API Keys from Environment
-# ==============================
+# Load API keys
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 
-# ==============================
 # Setup Gemini
-# ==============================
 gemini_model = None
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    gemini_model = genai.GenerativeModel("models/gemini-1.5-flash")
+    gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 
-# ==============================
 # Setup OpenAI
-# ==============================
 openai_client = None
 if OPENAI_API_KEY:
     openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 
-# ==============================
-# Home Route
-# ==============================
-@app.route("/", methods=["GET"])
+@app.route("/")
 def home():
     return "GyanSetu AI Server is running 🚀"
 
 
-# ==============================
-# Ask Route (GET + POST)
-# ==============================
-@app.route("/ask", methods=["GET", "POST"])
+@app.route("/ask", methods=["GET"])
 def ask():
-    if request.method == "GET":
-        query = request.args.get("query")
-    else:
-        data = request.get_json()
-        query = data.get("query") if data else None
+    query = request.args.get("query")
 
     if not query:
         return jsonify({"error": "Query is required"}), 400
 
-    # Try Gemini First
+    # 1️⃣ Try Gemini
     if gemini_model:
         try:
             res = gemini_model.generate_content(query)
             return jsonify({
                 "provider": "Gemini",
-                "answer": res.text.strip()
+                "answer": res.text
             })
         except Exception as e:
             print("Gemini error:", e)
 
-    # Fallback to OpenAI
+    # 2️⃣ Try Perplexity
+    if PERPLEXITY_API_KEY:
+        try:
+            url = "https://api.perplexity.ai/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {PERPLEXITY_API_KEY}",
+                "Content-Type": "application/json"
+            }
+
+            payload = {
+                "model": "sonar-small-online",
+                "messages": [
+                    {"role": "user", "content": query}
+                ]
+            }
+
+            response = requests.post(url, headers=headers, json=payload)
+            data = response.json()
+
+            return jsonify({
+                "provider": "Perplexity",
+                "answer": data["choices"][0]["message"]["content"]
+            })
+
+        except Exception as e:
+            print("Perplexity error:", e)
+
+    # 3️⃣ Try OpenAI
     if openai_client:
         try:
             completion = openai_client.chat.completions.create(
@@ -69,7 +82,7 @@ def ask():
             )
             return jsonify({
                 "provider": "OpenAI",
-                "answer": completion.choices[0].message.content.strip()
+                "answer": completion.choices[0].message.content
             })
         except Exception as e:
             print("OpenAI error:", e)
@@ -77,10 +90,5 @@ def ask():
     return jsonify({"error": "No AI service available"}), 500
 
 
-# ==============================
-# Run Server
-# ==============================
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
-
+    app.run(host="0.0.0.0", port=10000)
