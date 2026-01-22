@@ -5,46 +5,62 @@ from openai import OpenAI
 
 app = Flask(__name__)
 
-# Load API keys
+# ==============================
+# Load API Keys from Environment
+# ==============================
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# ==============================
 # Setup Gemini
+# ==============================
 gemini_model = None
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
     gemini_model = genai.GenerativeModel("gemini-pro")
 
+# ==============================
 # Setup OpenAI
+# ==============================
 openai_client = None
 if OPENAI_API_KEY:
     openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 
-@app.route("/")
+# ==============================
+# Home Route
+# ==============================
+@app.route("/", methods=["GET"])
 def home():
     return "GyanSetu AI Server is running 🚀"
 
 
-@app.route("/ask", methods=["GET"])
+# ==============================
+# Ask Route (GET + POST)
+# ==============================
+@app.route("/ask", methods=["GET", "POST"])
 def ask():
-    query = request.args.get("query")
+    if request.method == "GET":
+        query = request.args.get("query")
+    else:
+        data = request.get_json()
+        query = data.get("query") if data else None
 
     if not query:
         return jsonify({"error": "Query is required"}), 400
 
-    # Try Gemini
+    # Try Gemini First
     if gemini_model:
         try:
             res = gemini_model.generate_content(query)
             return jsonify({
                 "provider": "Gemini",
-                "answer": res.text
+                "answer": res.text.strip()
             })
         except Exception as e:
             print("Gemini error:", e)
 
-    # Try OpenAI
+    # Fallback to OpenAI
     if openai_client:
         try:
             completion = openai_client.chat.completions.create(
@@ -53,7 +69,7 @@ def ask():
             )
             return jsonify({
                 "provider": "OpenAI",
-                "answer": completion.choices[0].message.content
+                "answer": completion.choices[0].message.content.strip()
             })
         except Exception as e:
             print("OpenAI error:", e)
@@ -61,5 +77,9 @@ def ask():
     return jsonify({"error": "No AI service available"}), 500
 
 
+# ==============================
+# Run Server
+# ==============================
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
