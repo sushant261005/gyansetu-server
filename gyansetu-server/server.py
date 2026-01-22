@@ -5,21 +5,23 @@ from openai import OpenAI
 
 app = Flask(__name__)
 
-# Load API keys from environment
+# Load API Keys
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Configure Gemini
+# Setup Gemini if available
+gemini_model = None
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
+    gemini_model = genai.GenerativeModel("gemini-pro")
 
-# OpenAI client
+# Setup OpenAI if available
 openai_client = None
 if OPENAI_API_KEY:
     openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 
-@app.route("/", methods=["GET"])
+@app.route("/")
 def home():
     return "GyanSetu AI Server is running 🚀"
 
@@ -35,32 +37,29 @@ def ask_ai():
     if not query:
         return jsonify({"error": "Query is required"}), 400
 
-    # First try Gemini
-    if GEMINI_API_KEY:
+    # Try Gemini first
+    if gemini_model:
         try:
-            model = genai.GenerativeModel("gemini-pro")
-            response = model.generate_content(query)
+            response = gemini_model.generate_content(query)
             return jsonify({
-                "reply": response.text,
-                "model": "gemini"
+                "provider": "Gemini",
+                "answer": response.text
             })
         except Exception as e:
             print("Gemini error:", e)
 
     # Fallback to OpenAI
-    if OPENAI_API_KEY:
+    if openai_client:
         try:
             completion = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "Reply in the same language as the user."},
                     {"role": "user", "content": query}
                 ]
             )
-
             return jsonify({
-                "reply": completion.choices[0].message.content,
-                "model": "openai"
+                "provider": "OpenAI",
+                "answer": completion.choices[0].message.content
             })
         except Exception as e:
             print("OpenAI error:", e)
@@ -70,4 +69,3 @@ def ask_ai():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
-
