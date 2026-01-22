@@ -26,7 +26,6 @@ def home():
 
 @app.route("/ask", methods=["GET", "POST"])
 def ask_ai():
-    # Get query from GET or POST
     if request.method == "POST":
         data = request.json
         query = data.get("query")
@@ -71,3 +70,4 @@ def ask_ai():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
+
