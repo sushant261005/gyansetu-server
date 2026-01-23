@@ -12,7 +12,6 @@ app = Flask(__name__)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-HF_API_KEY = os.getenv("HF_API_KEY")
 
 # =========================
 # GEMINI SETUP
@@ -88,23 +87,6 @@ def ask():
             })
         except Exception as e:
             print("OpenAI failed:", e)
-
-    # 4️⃣ HUGGINGFACE (FREE – BACKUP)
-    if HF_API_KEY:
-        try:
-            r = requests.post(
-                "https://api-inference.huggingface.co/models/google/flan-t5-large",
-                headers={"Authorization": f"Bearer {HF_API_KEY}"},
-                json={"inputs": query},
-                timeout=20
-            )
-            data = r.json()
-            return jsonify({
-                "provider": "HuggingFace",
-                "answer": data[0]["generated_text"]
-            })
-        except Exception as e:
-            print("HF failed:", e)
 
     return jsonify({
         "error": "All AI services are currently unavailable"
