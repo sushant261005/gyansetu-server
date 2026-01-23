@@ -6,29 +6,29 @@ from openai import OpenAI
 
 app = Flask(__name__)
 
-# =========================
-# API KEYS (ENV VARIABLES)
-# =========================
+# ======================
+# ENV KEYS
+# ======================
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# =========================
-# GEMINI SETUP
-# =========================
+# ======================
+# GEMINI SETUP (FIXED)
+# ======================
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-# =========================
+# ======================
 # OPENAI SETUP
-# =========================
+# ======================
 openai_client = None
 if OPENAI_API_KEY:
     openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
-# =========================
+# ======================
 # ROUTES
-# =========================
+# ======================
 @app.route("/")
 def home():
     return "GyanSetu AI Server is running 🚀"
@@ -39,19 +39,20 @@ def ask():
     if not query:
         return jsonify({"error": "Query is required"}), 400
 
-    # 1️⃣ GEMINI (FREE – PRIMARY)
+    # 1️⃣ GEMINI (FREE – WORKING)
     if GEMINI_API_KEY:
         try:
-            model = genai.GenerativeModel("gemini-pro")
+            model = genai.GenerativeModel("gemini-1.5-flash")
             res = model.generate_content(query)
-            return jsonify({
-                "provider": "Gemini",
-                "answer": res.text
-            })
+            if res.text:
+                return jsonify({
+                    "provider": "Gemini",
+                    "answer": res.text
+                })
         except Exception as e:
             print("Gemini failed:", e)
 
-    # 2️⃣ GROQ (FREE – FAST)
+    # 2️⃣ GROQ (FREE – SAFE)
     if GROQ_API_KEY:
         try:
             r = requests.post(
@@ -66,15 +67,17 @@ def ask():
                 },
                 timeout=20
             )
+
             data = r.json()
-            return jsonify({
-                "provider": "Groq (LLaMA)",
-                "answer": data["choices"][0]["message"]["content"]
-            })
+            if "choices" in data:
+                return jsonify({
+                    "provider": "Groq (LLaMA)",
+                    "answer": data["choices"][0]["message"]["content"]
+                })
         except Exception as e:
             print("Groq failed:", e)
 
-    # 3️⃣ OPENAI (PAID – READY)
+    # 3️⃣ OPENAI (OPTIONAL – NO CRASH)
     if openai_client:
         try:
             completion = openai_client.chat.completions.create(
